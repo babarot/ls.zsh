@@ -1,0 +1,75 @@
+#!/bin/zsh
+
+# TODO:
+# ZSH_LS_OPTIONS
+# ZSH_LS_COLORS
+
+ls_paths() {
+    local    ls
+    local -a ls_paths
+
+    for ls in ${^==${(u)path[@]:A}}/{ls,gls}(N.)
+    do
+        ls_paths+=( "$ls" )
+    done
+
+    # No matches
+    if (( $#ls_paths == 0 )); then
+        return 1
+    fi
+
+    # Search GNU ls
+    for ls in "$ls_paths[@]"
+    do
+        if ${==ls} --version 2>&1 | grep -iq "GNU" &>/dev/null; then
+            echo "$ls"
+            return 0
+        fi
+    done
+
+    # Returns BSD ls pagh
+    echo "$ls_paths[1]"
+    return 0
+}
+
+ls_options() {
+    local -a ls_options
+
+    # color option
+    if is_linux || is_gls; then
+        ls_options+=("--color=always")
+    elif is_osx; then
+        ls_options+=("-G")
+    fi
+
+    # identifier option
+    ls_options+=("--classify")
+
+    # grouping option
+    if is_gls; then
+        ls_options+=("--group-directories-first")
+        ls_options+=("--human-readable")
+    fi
+
+    echo "$ls_options[*]"
+}
+
+main() {
+    local ls_path ls_option
+
+    ls_path="$(ls_paths)"
+    if (( $status != 0 )); then
+        echo "ls: not found" 1>&2
+        return 1
+    fi
+
+    # TODO:
+    #ls_option="$(ls_options)"
+    #${==ls_path} ${=ls_option} "$argv[@]"
+    ${==ls_path} "$argv[@]"
+
+    return $status
+}
+
+main "$argv[@]"
+exit $status
